@@ -1,0 +1,6 @@
+# general
+.DS_Store
+**/.DS_Store
+
+# script cache
+__pycache__
