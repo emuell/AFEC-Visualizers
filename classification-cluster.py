@@ -8,8 +8,6 @@ from __future__ import annotations
 
 import sys, os
 import sqlite3, json, csv
-from typing import Text
-from dash_core_components.Markdown import Markdown
 import pandas as pd
 import numpy as np
 
@@ -18,9 +16,13 @@ from just_playback import Playback
 
 from sklearn.decomposition import PCA
 from sklearn.manifold import TSNE
+
 import plotly.express as px
 
-import dash, dash_core_components as dcc, dash_html_components as html
+import dash
+import dash_core_components as dcc
+import dash_html_components as html
+
 from dash.dependencies import Input, Output
 
 # -------------------------------------------------------------------------------------------------
