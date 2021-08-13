@@ -29,10 +29,14 @@ from dash.dependencies import Input, Output
 
 print('Reading AFEC database...')
 
-examples_path = os.path.join(os.path.dirname(sys.argv[0]), 'Examples')
-if len(sys.argv) > 1:
-  examples_path = sys.argv[1]
-dbfile = os.path.join(examples_path, 'afec.db')
+if len(sys.argv) != 2:
+  raise Exception("Missing afec.db path argument")
+
+dbfile = ""
+if sys.argv[1].endswith('afec.db'):
+  dbfile = os.path.normpath(sys.argv[1])
+else:
+  dbfile = os.path.normpath(os.path.join(sys.argv[1], 'afec.db'))
 
 conn = sqlite3.connect(dbfile)
 conn.text_factory = str 
@@ -100,13 +104,13 @@ def create_cluster_plot(perplexity, learning_rate):
     #pca = PCA(n_components=8)
     #projections = pca.fit_transform(features)
     tsne = TSNE(n_components=2, perplexity=perplexity, 
-      learning_rate=learning_rate, metric='correlation', init='pca', random_state=244)
+      learning_rate=learning_rate, init='pca', random_state=244)
     projections = tsne.fit_transform(features)
     print('Creating t-SNE scatter...')
     fig = px.scatter(
         data_frame=projections, 
         x=0, y=1,
-        title=examples_path,
+        title=os.path.dirname(dbfile),
         hover_name=df.File,
         color=df.Category,
         color_discrete_map=category_colors,
@@ -143,12 +147,19 @@ def create_waveform_figure(filename):
     print('Loading audio file...')
     audiofile = AudioSegment.from_file(abs_filename)
     print('Generating waveform plot...')
-    # downsample to avoid too many points in plot - this is slow...
     signal = audiofile.get_array_of_samples()
-    signal = np.frombuffer(signal, dtype ='int16')
-    downsample_factor = int(len(signal) / 4096) 
-    signal = np.interp(np.arange(0, len(signal), downsample_factor), 
-      np.arange(0, len(signal)), signal)
+    dtype = 'int8'
+    if (audiofile.sample_width == 2):
+       dtype = 'int16'
+    elif (audiofile.sample_width == 4):
+       dtype = 'int32'
+    signal = np.frombuffer(signal, dtype=dtype)
+    # downsample to avoid too many points in plot - this is slow...
+    downsample_factor = max(1, int(len(signal) / 32768))
+    if downsample_factor > 1:
+      signal = np.interp(np.arange(0, len(signal), downsample_factor), 
+        np.arange(0, len(signal)), signal)
+    df = pd.DataFrame(data={'Amplitude': signal})
     df = pd.DataFrame(data={'Amplitude': signal})
     fig = px.line(
         title=filename,
@@ -182,23 +193,33 @@ app = dash.Dash(
 
 app.config.suppress_callback_exceptions = True
 
+BODY_MARGIN = 8 # assume this is the default html body margin
+CONTENT_HEIGHT = 'calc(100vh - {margin}px)'.format(margin = 2*BODY_MARGIN)
+UPPER_CONTENT_HEIGHT = 'calc(50vh - {margin}px)'.format(margin = BODY_MARGIN)
+LOWER_CONTENT_HEIGHT = 'calc(50vh - {margin}px)'.format(margin = BODY_MARGIN)
+CLUSTER_SLIDER_HEIGHT = 80
+CLUSTER_PLOT_HEIGHT = 'calc(50vh - {margin}px)'.format(margin = BODY_MARGIN + CLUSTER_SLIDER_HEIGHT)
+FEATURES_HEIGHT = 'calc(50vh - {margin}px)'.format(margin = BODY_MARGIN)
+
 app.layout = html.Div(
     className='background', 
-    style={'height': 'calc(100vh - 16px)', 'width': '100%'},
+    style={'height': CONTENT_HEIGHT, 'width': '100%'},
     children=[
         html.Div(
             className='row', 
-            style={'height': 'calc(50vh - 8px)', 'width': '100%'},
+            style={'height': UPPER_CONTENT_HEIGHT, 'width': '100%'},
             children=[
                 html.Div(
                     className='twelve columns',
-                    style={'height': 'calc(50vh - 48px)', 'width': '100%'},
+                    style={'height': CLUSTER_PLOT_HEIGHT, 'width': '100%'},
                     children=[
-                        dcc.Loading(
+                        html.Div(
                             id='cluster',
-                            type='default',
-                            fullscreen=True,
-                            children=[dcc.Markdown('Generating Cluster. This may take a while...')]
+                            children=[
+                                dcc.Markdown('Generating Cluster. This may take a while...', 
+                                    style={'display': 'flex', 'height': CLUSTER_PLOT_HEIGHT, 
+                                        'alignItems': 'center', 'justifyContent': 'center'})
+                            ]
                         ),
                         html.P(
                             children=[
@@ -212,7 +233,8 @@ app.layout = html.Div(
                                     marks={5 * i: '{}'.format(5 * i) for i in range(10 + 1)}
                                 )
                             ],
-                            style={'height': 20, 'padding-right': '8rem', 'display': 'inline-block'}
+                            style={'height': CLUSTER_SLIDER_HEIGHT, 'width': 200, 
+                                'padding-right': '8rem', 'display': 'inline-block'}
                         ),
                         html.P(
                             children=[
@@ -226,7 +248,8 @@ app.layout = html.Div(
                                     marks={200 * i: '{}'.format(200 * i) for i in range(5 + 1)}
                                 )
                             ],
-                            style={'height': 20, 'padding-right': '8rem', 'display': 'inline-block'}
+                            style={'height': CLUSTER_SLIDER_HEIGHT, 'width': 200, 
+                                'padding-right': '8rem', 'display': 'inline-block'}
                         ),
                     ]
                 )
@@ -234,7 +257,7 @@ app.layout = html.Div(
         ),
         html.Div(
             className='row', 
-            style={'height': 'calc(50vh - 8px)', 'width': '100%'},
+            style={'height': LOWER_CONTENT_HEIGHT, 'width': '100%'},
             children=[
                 html.Div(id='class-strength', className='six columns', style={'height': 'inherit'}),
                 html.Div(id='waveform', className='six columns', style={'height': 'inherit'})
@@ -253,7 +276,8 @@ def update_cluster(slider_value, learning_rate):
     return dcc.Graph(
         id='cluster-graph', 
         figure=create_cluster_plot(slider_value, learning_rate), 
-        style={'height': 'calc(50vh - 48px'})
+        style={'height': CLUSTER_PLOT_HEIGHT}
+    )
 
 @app.callback(
     dash.dependencies.Output('class-strength', 'children'),
