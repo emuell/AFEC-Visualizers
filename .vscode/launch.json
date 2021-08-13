@@ -5,13 +5,23 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Python: FastAPI",
+            "name": "Python: classification-cluster",
             "type": "python",
             "request": "launch",
             "program": "${workspaceFolder}/classification-cluster.py",
-            "args": ["C:/Users/emuell/Music/Samples/Collections/Jungle Jungle"],
+            "args": ["D:/Samples/afec.db"],
+            "justMyCode": false,
+            "jinja": true
+        },
+        {
+            "name": "Python: explorer",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/explorer.py",
+            "args": ["D:/Samples/afec.db"],
             "justMyCode": false,
             "jinja": true
         }
+
     ]
 }
