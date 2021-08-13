@@ -1,11 +1,11 @@
 # AFEC Visualizers
 
-This repository contains vizualization experiments for [AFEC](https://git.github.com/emuell/afec)'s classification models using [plotly dash](https://plotly.com/dash/).
+This repository contains visualization experiments for [AFEC](https://git.github.com/emuell/afec)'s classification models using [plotly dash](https://plotly.com/dash/).
 
 
 ## Explorer
 
-Shows high level features of an afec database in a table and shows the sample waveform. Clicking on an entry plays the audio file.
+Shows high-level features of an afec database in a simple table. Clicking on an entry shows the sample waveform and plays the audio file.
 
 ### Usage
 
@@ -23,7 +23,7 @@ Python3 with the following pip modules:
 
 ## Classification Cluster
 
-Creates a 2d T-SNE cluster from the afec high level classification data. Clicking on a point in the plot shows the samples detailed classification scores and the sample waveform. Clicking on an entry plays also plays the audio file.
+Creates a 2d t-SNE cluster from the afec high-level classification data. Clicking on a point in the plot shows the samples detailed classification scores and the sample waveform and also plays the audio file.
 
 ### Usage
 
